@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>BETCRYPTO Admin</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:#030814;--card:#0A1428;--card2:#0F1D40;--line:#142448;--text:#EAF1FF;--muted:#8CA2C6;--cyan:#2DD4F0;--blue:#3F7BFF;--ok:#34D399;--warn:#FBBF24;--bad:#FB7185}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:14px}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;padding:0}
+input,select,textarea{font:inherit;color:var(--text);background:#060D20;border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+.hide{display:none!important}
+/* ---- entry gate ---- */
+#gate{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;z-index:100;padding:24px;text-align:center}
+#gate .dont{color:#ff2a2a;font-size:34px;font-weight:800;letter-spacing:.06em;text-shadow:0 0 18px rgba(255,0,0,.45)}
+#gate .sub{color:#7a1212;font-size:13px;max-width:320px;line-height:1.5}
+#gate button{background:#ff2a2a;color:#000;font-weight:800;padding:16px 34px;border-radius:12px;font-size:16px;letter-spacing:.04em}
+/* ---- login steps ---- */
+#login{max-width:420px;margin:0 auto;padding:28px 18px;min-height:100%}
+#login h1{font-size:20px;margin:0 0 6px}
+#login p{color:var(--muted);line-height:1.5;margin:0 0 14px}
+.btn{background:linear-gradient(90deg,var(--cyan),var(--blue));color:#04101F;font-weight:700;padding:12px 16px;border-radius:12px;width:100%;margin-top:10px}
+.btn.sec{background:var(--card2);color:var(--text);border:1px solid var(--line)}
+.btn.danger{background:#3a0f18;color:#FFC9D2;border:1px solid #7A2A3A}
+.btn.small{width:auto;padding:7px 12px;font-size:12px;margin:0}
+.msg{border-radius:10px;padding:10px 12px;margin:10px 0;font-size:13px;line-height:1.45}
+.msg.bad{background:#2B1218;border:1px solid #7A2A3A;color:#FFC9D2}
+.msg.ok{background:#0F2A22;border:1px solid #1F6B52;color:#BDF3DD}
+.msg.warn{background:#2A2210;border:1px solid #6B5516;color:#FCE9A8}
+.secret{word-break:break-all;background:#060D20;border:1px dashed var(--line);border-radius:10px;padding:10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:#C5D3EC}
+/* ---- app shell ---- */
+#app{max-width:980px;margin:0 auto;padding:0 0 40px}
+header{position:sticky;top:0;z-index:5;background:#050C1C;border-bottom:1px solid var(--line);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+header b{letter-spacing:.12em;color:var(--cyan)}
+nav{display:flex;gap:6px;overflow-x:auto;padding:10px 12px;border-bottom:1px solid var(--line);background:#050C1C}
+nav button{white-space:nowrap;padding:8px 12px;border-radius:10px;color:var(--muted);background:var(--card)}
+nav button.on{color:#04101F;background:linear-gradient(90deg,var(--cyan),var(--blue));font-weight:700}
+main{padding:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:14px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.stat .n{font-size:20px;font-weight:700;margin-top:4px;word-break:break-all}
+.stat .l{color:var(--muted);font-size:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.card h2{font-size:15px;margin:0 0 8px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{text-align:start;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top;word-break:break-word}
+th{color:var(--muted);font-weight:600}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:#1B2D55;color:#BBD0F2}
+.badge.ok{background:#0F2A22;color:var(--ok)}.badge.bad{background:#2B1218;color:var(--bad)}.badge.warn{background:#2A2210;color:var(--warn)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.row input{width:auto;flex:1;min-width:160px}
+.kv{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding:7px 0}
+.kv span:first-child{color:var(--muted)}
+.kv b{text-align:end;word-break:break-all;font-weight:600}
+.addr{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;word-break:break-all;background:#060D20;border-radius:8px;padding:8px;margin:6px 0}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+/* ---- modal ---- */
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;justify-content:center;z-index:50}
+#modal .box{background:var(--card);border:1px solid var(--line);border-radius:18px 18px 0 0;width:100%;max-width:520px;padding:16px;max-height:90%;overflow:auto}
+#modal h3{margin:0 0 10px;font-size:16px}
+#modal label{display:block;color:var(--muted);font-size:12px;margin:10px 0 4px}
+</style>
+</head>
+<body>
+
+<!-- ENTRY GATE: visual only. Real security is enforced by the backend. -->
+<div id="gate">
+  <div class="dont">DON'T ENTER</div>
+  <div class="sub">Restricted area. Authorised administrators only.</div>
+  <button id="gateBtn" type="button">Enter</button>
+</div>
+
+<!-- LOGIN -->
+<div id="login" class="hide">
+  <h1 id="loginTitle">Admin sign-in</h1>
+  <p id="loginText">Checking your Telegram identity…</p>
+  <div id="loginMsg"></div>
+
+  <div id="stepPassword" class="hide">
+    <label id="pwLabel" style="color:var(--muted);font-size:12px">Password</label>
+    <input id="pwInput" type="password" autocomplete="current-password">
+    <button class="btn" id="pwBtn" type="button">Continue</button>
+  </div>
+
+</div>
+
+<!-- APP -->
+<div id="app" class="hide">
+  <header>
+    <b>BETCRYPTO ADMIN</b>
+    <div class="row" style="margin:0">
+      <button class="btn small sec" id="reloadBtn" type="button">Refresh</button>
+      <button class="btn small danger" id="logoutBtn" type="button">Log out</button>
+    </div>
+  </header>
+  <nav id="nav"></nav>
+  <main id="view"></main>
+</div>
+
+<!-- MODAL (used for confirmations and inputs) -->
+<div id="modal" class="hide"><div class="box" id="modalBox"></div></div>
+
+<script>
+/* ==================================================================
+   CONFIG - the only value to check. It must equal your Hostless URL.
+   ================================================================== */
+const API = "https://betcryptobackend123.hostless.app";
+
+const TAB_NAMES = [["overview","Overview"],["users","Users"],["deposits","Deposits"],["bets","Bets"],["purchases","Purchases"],["referrals","Referrals"],["withdrawals","Withdrawals"],["reports","Reports"],["logs","Logs"],["settings","Settings"]];
+
+let TOKEN = null;      // kept in memory only, never saved to the device
+let TAB = "overview";
+let PENDING_PW = null;
+let TG = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+
+/* ---------- helpers ---------- */
+const $ = (s) => document.querySelector(s);
+const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const show = (id, on) => { const el = $(id); if (el) el.classList.toggle("hide", !on); };
+const fmtDate = (v) => { if (!v) return ""; const d = new Date(v); return isNaN(d) ? esc(v) : esc(d.toLocaleString()); };
+const msgBox = (kind, text) => `<div class="msg ${kind}">${esc(text)}</div>`;
+const badge = (text, kind) => `<span class="badge ${kind || ""}">${esc(text)}</span>`;
+const statusKind = (s) => { s = String(s || "").toLowerCase(); if (/paid|credited|completed|settled|won|active|approved/.test(s)) return "ok"; if (/rejected|failed|lost|banned|suspended|cancel/.test(s)) return "bad"; return "warn"; };
+
+const ERRORS = {
+  UNAUTHENTICATED: "Your session has ended. Please sign in again.",
+  ADMIN_UNAUTH: "Your session has ended. Please sign in again.",
+  ADMIN_STAGE: "Please complete the sign-in steps.",
+  NOT_ADMIN: "This Telegram account is not an administrator.",
+  BAD_ADMIN_LOGIN: "Wrong password.",
+  BAD_ADMIN_CODE: "Wrong or expired code.",
+  WEAK_ADMIN_PASSWORD: "Password must be at least 12 characters and not a common password.",
+  TOO_MANY: "Too many attempts. Please wait a few minutes.",
+  REAUTH_REQUIRED: "Please enter your password to confirm this action.",
+  INSUFFICIENT_FUNDS: "Not enough balance.",
+  NOT_FOUND: "Not found.",
+  REASON_REQUIRED: "A reason is required.",
+  TXN_HASH_REQUIRED: "Enter the transaction hash of the payment.",
+  BAD_STATE: "This request was already handled.",
+  SERVER_ERROR: "Server error. Try again."
+};
+const errText = (data, status) => ERRORS[data && data.code] || (data && data.message) || ("Request failed (" + status + ")");
+
+async function api(method, path, body, { auth = true, retried = false } = {}) {
+  const headers = { "Accept": "application/json" };
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (auth && TOKEN) headers["Authorization"] = "Bearer " + TOKEN;
+  let r;
+  try {
+    r = await fetch(API + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), credentials: "omit" });
+  } catch (e) { throw new Error("Cannot reach the server. Check your connection."); }
+  let data = null; try { data = await r.json(); } catch (e) {}
+  if (r.status === 403 && data && data.code === "REAUTH_REQUIRED" && !retried) {
+    const ok = await askReauth();
+    if (!ok) throw new Error("Confirmation cancelled.");
+    return api(method, path, body, { auth, retried: true });
+  }
+  if (r.status === 401 && (data && (data.code === "ADMIN_UNAUTH" || data.code === "UNAUTHENTICATED"))) { TOKEN = null; showLogin(); }
+  if (!r.ok) { const err = new Error(errText(data, r.status)); err.code = data && data.code; throw err; }
+  return data;
+}
+async function download(path, filename) {
+  const r = await fetch(API + path, { headers: { "Authorization": "Bearer " + TOKEN }, credentials: "omit" });
+  if (!r.ok) throw new Error("Export failed.");
+  const blob = await r.blob();
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ---------- modal ---------- */
+function modal(title, fields, okLabel, danger) {
+  return new Promise((resolve) => {
+    const inputs = fields.map((f, i) => `<label>${esc(f.label)}</label>` + (f.multiline
+      ? `<textarea id="mf${i}" rows="2"></textarea>`
+      : `<input id="mf${i}" type="${esc(f.type || "text")}" value="${esc(f.value || "")}" autocomplete="off">`)).join("");
+    $("#modalBox").innerHTML = `<h3>${esc(title)}</h3>${inputs}<div id="mErr"></div>
+      <div class="row"><button class="btn small ${danger ? "danger" : ""}" id="mOk" type="button" style="flex:1">${esc(okLabel || "OK")}</button>
+      <button class="btn small sec" id="mCancel" type="button" style="flex:1">Cancel</button></div>`;
+    show("#modal", true);
+    const close = (val) => { show("#modal", false); resolve(val); };
+    $("#mCancel").onclick = () => close(null);
+    $("#mOk").onclick = () => {
+      const vals = fields.map((f, i) => ($("#mf" + i).value || "").trim());
+      if (fields.some((f, i) => f.required && !vals[i])) { $("#mErr").innerHTML = msgBox("bad", "Please fill in the required field."); return; }
+      close(vals);
+    };
+    const first = $("#mf0"); if (first) first.focus();
+  });
+}
+function askReauth() {
+  return new Promise((resolve) => {
+    $("#modalBox").innerHTML = `<h3>Confirm with your password</h3><p style="color:var(--muted)">This action needs your password again.</p>
+      <input id="rwPw" type="password" autocomplete="current-password"><div id="mErr"></div>
+      <div class="row"><button class="btn small" id="rwOk" type="button" style="flex:1">Confirm</button>
+      <button class="btn small sec" id="rwNo" type="button" style="flex:1">Cancel</button></div>`;
+    show("#modal", true); $("#rwPw").focus();
+    const done = (v) => { show("#modal", false); resolve(v); };
+    $("#rwNo").onclick = () => done(false);
+    $("#rwOk").onclick = async () => {
+      try { await api("POST", "/admin/reauth", { password: $("#rwPw").value }, { retried: true }); done(true); }
+      catch (e) { $("#mErr").innerHTML = msgBox("bad", e.message); }
+    };
+  });
+}
+function confirmBox(text, label, danger) {
+  return new Promise((resolve) => {
+    $("#modalBox").innerHTML = `<h3>${esc(label)}</h3><p>${esc(text)}</p>
+      <div class="row"><button class="btn small ${danger ? "danger" : ""}" id="cOk" type="button" style="flex:1">${esc(label)}</button>
+      <button class="btn small sec" id="cNo" type="button" style="flex:1">Cancel</button></div>`;
+    show("#modal", true);
+    $("#cNo").onclick = () => { show("#modal", false); resolve(false); };
+    $("#cOk").onclick = () => { show("#modal", false); resolve(true); };
+  });
+}
+
+/* ---------- sign-in ---------- */
+function showLogin() {
+  show("#gate", false); show("#app", false); show("#login", true);
+  show("#stepPassword", false);
+  $("#loginMsg").innerHTML = "";
+}
+async function startSignIn() {
+  const initData = TG && TG.initData ? TG.initData : "";
+  if (!initData) {
+    $("#loginTitle").textContent = "Open from your bot";
+    $("#loginText").textContent = "This admin page only works when opened from the admin bot button inside Telegram.";
+    return;
+  }
+  try {
+    const d = await api("POST", "/admin/auth/telegram", { initData }, { auth: false });
+    TOKEN = d.token;
+    if (d.stage === "setup") {
+      $("#loginTitle").textContent = "Create your admin password";
+      $("#loginText").textContent = "First time only. Use at least 12 characters. You will not need a code.";
+      $("#pwLabel").textContent = "New password";
+      $("#pwBtn").textContent = "Create password";
+    } else {
+      $("#loginTitle").textContent = "Enter your password";
+      $("#loginText").textContent = "Telegram identity confirmed.";
+      $("#pwLabel").textContent = "Password";
+      $("#pwBtn").textContent = "Continue";
+    }
+    show("#stepPassword", true);
+    $("#pwInput").focus();
+  } catch (e) {
+    $("#loginText").textContent = "";
+    $("#loginMsg").innerHTML = msgBox("bad", e.message);
+  }
+}
+async function submitPassword() {
+  const pw = $("#pwInput").value;
+  $("#loginMsg").innerHTML = "";
+  try {
+    await api("POST", "/admin/auth/password", { password: pw }, { auth: true });
+    $("#pwInput").value = "";
+    enterApp();
+  } catch (e) { $("#loginMsg").innerHTML = msgBox("bad", e.message); }
+}
+function enterApp() {
+  show("#gate", false); show("#login", false); show("#app", true);
+  buildNav(); render();
+}
+
+/* ---------- navigation ---------- */
+function buildNav() {
+  $("#nav").innerHTML = TAB_NAMES.map(([k, l]) => `<button type="button" data-tab="${k}" class="${TAB === k ? "on" : ""}">${esc(l)}</button>`).join("");
+}
+document.addEventListener("click", (ev) => {
+  const t = ev.target.closest("[data-tab]");
+  if (t) { TAB = t.getAttribute("data-tab"); buildNav(); render(); return; }
+  const a = ev.target.closest("[data-act]");
+  if (a) act(a.getAttribute("data-act"), a.dataset);
+});
+
+async function render() {
+  const v = $("#view");
+  v.innerHTML = `<div class="card">${esc("Loading…")}</div>`;
+  try {
+    const fn = { overview: vOverview, users: vUsers, deposits: vDeposits, bets: vBets, purchases: vPurchases, referrals: vReferrals, withdrawals: vWithdrawals, reports: vReports, logs: vLogs, settings: vSettings }[TAB];
+    await fn(v);
+  } catch (e) { v.innerHTML = msgBox("bad", e.message); }
+}
+
+/* ---------- Overview ---------- */
+async function vOverview(v) {
+  const o = await api("GET", "/admin/overview");
+  const u = o.users || {}, w = o.withdrawals || {}, b = o.bets || {}, d = o.deposits || {};
+  const stat = (l, n) => `<div class="stat"><div class="l">${esc(l)}</div><div class="n">${esc(n == null ? 0 : n)}</div></div>`;
+  const probs = (o.ledgerProblems || []).length;
+  v.innerHTML = `
+    ${probs ? msgBox("bad", "Ledger check failed for " + probs + " account(s). Do not pay out. Contact support.") : msgBox("ok", "Ledger check: all balances match.")}
+    <div class="grid">
+      ${stat("Users", u.total)} ${stat("New (7 days)", u.new7d)} ${stat("New (24 h)", u.new24h)}
+      ${stat("With username", u.withUsername)} ${stat("Suspended", u.suspended)} ${stat("Banned", u.banned)}
+      ${stat("Deposits credited", d.credited)} ${stat("Deposits pending", d.pending)}
+      ${stat("Bets open", b.open)} ${stat("Bets settled", b.settled)} ${stat("Bets void", b.void)} ${stat("Bets due now", b.dueNow)}
+      ${stat("Purchases", o.purchases)} ${stat("Referrals qualified", o.referralsQualified)}
+      ${stat("Withdrawals pending", w.pending)} ${stat("Withdrawals approved", w.approved)} ${stat("Withdrawals paid", w.paid)} ${stat("Withdrawals rejected", w.rejected)}
+    </div>
+    <div class="card"><h2>System balances</h2>${kvTable(o.systemBalances || {})}</div>`;
+}
+function kvTable(obj) {
+  const keys = Object.keys(obj);
+  if (!keys.length) return `<p style="color:var(--muted)">No data yet.</p>`;
+  return keys.map((k) => `<div class="kv"><span>${esc(k)}</span><b>${esc(obj[k])}</b></div>`).join("");
+}
+
+/* ---------- Users ---------- */
+async function vUsers(v) {
+  const q = (window.USER_Q || "");
+  const qs = q ? "?q=" + encodeURIComponent(q) : "";
+  const d = await api("GET", "/admin/users" + qs);
+  const rows = (d.items || []).map((u) => `<tr><td><a href="#" data-act="openUser" data-id="${esc(u.id)}" style="color:var(--cyan)">${esc(u.accountId || u.id)}</a></td><td>${esc(u.username || "—")}</td><td>${badge(u.status, statusKind(u.status))}</td><td>${fmtDate(u.createdAt)}</td></tr>`).join("");
+  v.innerHTML = `
+    <div class="card"><h2>Find a user</h2>
+      <div class="row"><input id="uq" placeholder="ID, BC-ID, username, email or Telegram ID" value="${esc(q)}">
+      <button class="btn small" data-act="searchUsers" type="button">Search</button></div></div>
+    <div class="card"><table><thead><tr><th>Account ID</th><th>Username</th><th>Status</th><th>Joined</th></tr></thead><tbody>${rows || `<tr><td colspan="4" style="color:var(--muted)">No users found.</td></tr>`}</tbody></table></div>`;
+}
+async function openUser(id) {
+  const v = $("#view");
+  v.innerHTML = `<div class="card">Loading…</div>`;
+  const d = await api("GET", "/admin/users/" + encodeURIComponent(id));
+  const u = d.user || {};
+  const tg = d.telegram ? `${esc(d.telegram.id)} (${esc(d.telegram.username || "no @name")})` : "Not linked";
+  const em = d.email ? `${esc(d.email.address)} ${d.email.verified ? badge("verified", "ok") : badge("not verified", "warn")}` : "None";
+  const bal = d.balances || {};
+  const balRows = Object.keys(bal).map((k) => `<div class="kv"><span>${esc(k)}</span><b>${esc(bal[k])}</b></div>`).join("") || `<p style="color:var(--muted)">No balances.</p>`;
+  const locs = (d.locations || []).map((l) => `<tr><td>${esc(l.source)}</td><td>${esc(l.country || "")} ${esc(l.city || "")}</td><td>${l.lat != null ? `<a style="color:var(--cyan)" target="_blank" rel="noopener" href="https://maps.google.com/?q=${esc(l.lat)},${esc(l.lng)}">${esc(Number(l.lat).toFixed(5))}, ${esc(Number(l.lng).toFixed(5))}</a> (±${esc(Math.round(l.accuracyM || 0))} m)` : ""}</td><td>${fmtDate(l.at)}</td></tr>`).join("");
+  const dep = (d.deposits || []).map((x) => `<tr><td>${fmtDate(x.created_at)}</td><td>${esc(x.network)}</td><td>${esc(x.amount_credited || x.amount_sent || "")}</td><td>${badge(x.status, statusKind(x.status))}</td></tr>`).join("");
+  const bets = (d.bets || []).map((x) => `<tr><td>${esc(x.public_id)}</td><td>${esc(x.coin)} ${esc(x.prediction)}</td><td>${esc(x.stake)}</td><td>${esc(x.start_price)}</td><td>${esc(x.final_price || "")}</td><td>${esc(x.result || "")}</td><td>${badge(x.status, statusKind(x.status))}</td></tr>`).join("");
+  const wds = (d.withdrawals || []).map((x) => `<tr><td>${esc(x.public_id)}</td><td>${esc(x.asset)} ${esc(x.network || "")}</td><td>${esc(x.amount)}</td><td>${badge(x.status, statusKind(x.status))}</td><td>${fmtDate(x.requested_at)}</td></tr>`).join("");
+  const led = (d.ledger || []).map((x) => `<tr><td>${fmtDate(x.created_at)}</td><td>${esc(x.kind)}</td><td>${esc(x.bucket)}</td><td>${esc(x.asset)}</td><td>${esc(x.amount)}</td></tr>`).join("");
+  const inv = (d.invitees || []).map((x) => `<tr><td>${esc(x.inviteeId)}</td><td>${badge(x.status, statusKind(x.status))}</td><td>${esc(x.reward || "")}</td><td>${fmtDate(x.at)}</td></tr>`).join("");
+  const sharing = (d.accountsSharingNetwork || []).length ? `<p>Accounts sharing the same network (IP hash): ${(d.accountsSharingNetwork || []).map((x) => esc(x)).join(", ")}</p>` : `<p style="color:var(--muted)">No other account shares this network.</p>`;
+  v.innerHTML = `
+    <div class="row"><button class="btn small sec" data-act="backUsers" type="button">← Back to users</button></div>
+    <div class="card"><h2>Profile</h2>
+      <div class="kv"><span>Account ID</span><b>${esc(u.accountId)}</b></div>
+      <div class="kv"><span>Username</span><b>${esc(u.username || "—")}</b></div>
+      <div class="kv"><span>Status</span><b>${badge(u.status, statusKind(u.status))}</b></div>
+      <div class="kv"><span>Joined</span><b>${fmtDate(u.createdAt)}</b></div>
+      <div class="kv"><span>Age confirmed</span><b>${u.ageConfirmedAt ? fmtDate(u.ageConfirmedAt) : "No"}</b></div>
+      <div class="kv"><span>Email</span><b>${em}</b></div>
+      <div class="kv"><span>Telegram</span><b>${tg}</b></div>
+      <div class="kv"><span>Signup referral code</span><b>${esc(d.signupReferralCode || "—")}</b></div>
+      <div class="kv"><span>Invited by</span><b>${d.invitedBy ? esc(d.invitedBy.accountId + " " + (d.invitedBy.username || "")) : "—"}</b></div>
+      <div class="row">
+        <button class="btn small sec" data-act="setStatus" data-id="${esc(u.id)}" data-status="active" type="button">Set active</button>
+        <button class="btn small danger" data-act="setStatus" data-id="${esc(u.id)}" data-status="suspended" type="button">Suspend</button>
+        <button class="btn small danger" data-act="setStatus" data-id="${esc(u.id)}" data-status="banned" type="button">Ban</button>
+        <button class="btn small sec" data-act="adjust" data-id="${esc(u.id)}" type="button">Manual adjustment</button>
+      </div>
+    </div>
+    <div class="card"><h2>Balances</h2>${balRows}</div>
+    <div class="card"><h2>Invitees</h2><table><thead><tr><th>Invitee ID</th><th>Status</th><th>Reward</th><th>When</th></tr></thead><tbody>${inv || `<tr><td colspan="4" style="color:var(--muted)">None.</td></tr>`}</tbody></table></div>
+    <div class="card"><h2>Locations</h2><table><thead><tr><th>Source</th><th>Place</th><th>Map / accuracy</th><th>When</th></tr></thead><tbody>${locs || `<tr><td colspan="4" style="color:var(--muted)">No locations recorded.</td></tr>`}</tbody></table>${sharing}</div>
+    <div class="card"><h2>Deposits</h2><table><thead><tr><th>When</th><th>Network</th><th>Amount</th><th>Status</th></tr></thead><tbody>${dep || `<tr><td colspan="4" style="color:var(--muted)">None.</td></tr>`}</tbody></table></div>
+    <div class="card"><h2>Bets</h2><table><thead><tr><th>ID</th><th>Bet</th><th>Stake</th><th>Start</th><th>Final</th><th>Result</th><th>Status</th></tr></thead><tbody>${bets || `<tr><td colspan="7" style="color:var(--muted)">None.</td></tr>`}</tbody></table></div>
+    <div class="card"><h2>Withdrawals</h2><table><thead><tr><th>ID</th><th>Asset</th><th>Amount</th><th>Status</th><th>Requested</th></tr></thead><tbody>${wds || `<tr><td colspan="5" style="color:var(--muted)">None.</td></tr>`}</tbody></table></div>
+    <div class="card"><h2>Ledger (latest)</h2><table><thead><tr><th>When</th><th>Type</th><th>Balance</th><th>Asset</th><th>Amount</th></tr></thead><tbody>${led || `<tr><td colspan="5" style="color:var(--muted)">None.</td></tr>`}</tbody></table></div>`;
+}
+
+/* ---------- Deposits, bets, purchases, referrals ---------- */
+async function vDeposits(v) {
+  const d = await api("GET", "/admin/deposits");
+  const rows = (d.items || []).map((x) => `<tr><td>${fmtDate(x.created_at)}</td><td>${esc(x.user_id)}</td><td>${esc(x.network)}</td><td>${esc(x.amount_sent || "")}</td><td>${esc(x.amount_credited || "")}</td><td>${esc(x.txn_id)}</td><td>${badge(x.status, statusKind(x.status))}</td><td>${esc(x.confirmations ?? "")}</td></tr>`).join("");
+  v.innerHTML = `<div class="card"><h2>Deposits</h2><table><thead><tr><th>When</th><th>User</th><th>Network</th><th>Sent</th><th>Credited</th><th>Plisio txn</th><th>Status</th><th>Conf.</th></tr></thead><tbody>${rows || `<tr><td colspan="8" style="color:var(--muted)">None.</td></tr>`}</tbody></table></div>`;
+}
+async function vBets(v) {
+  const d = await api("GET", "/admin/bets");
+  const rows = (d.items || []).map((x) => `<tr><td>${fmtDate(x.created_at)}</td><td>${esc(x.public_id)}</td><td>${esc(x.user_id)}</td><td>${esc(x.coin)} ${esc(x.prediction)}</td><td>${esc(x.stake)}</td><td>${esc(x.start_price)}</td><td>${esc(x.final_price || "")}</td><td>${esc(x.start_source || "")}</td><td>${esc(x.final_source || "")}</td><td>${esc(x.result || "")}</td><td>${esc(x.payout_total)}</td><td>${badge(x.status, statusKind(x.status))}</td></tr>`).join("");
+  v.innerHTML = `<div class="card"><h2>Bets</h2><table><thead><tr><th>When</th><th>ID</th><th>User</th><th>Bet</th><th>Stake</th><th>Start</th><th>Final</th><th>Start src</th><th>Final src</th><th>Result</th><th>Payout</th><th>Status</th></tr></thead><tbody>${rows || `<tr><td colspan="12" style="color:var(--muted)">None.</td></tr>`}</tbody></table></div>`;
+}
+async function vPurchases(v) {
+  const d = await api("GET", "/admin/purchases");
+  const rows = (d.items || []).map((x) => `<tr><td>${fmtDate(x.created_at)}</td><td>${esc(x.user_id)}</td><td>${esc(x.coin)}</td><td>${esc(x.usdt_amount)}</td><td>${esc(x.qty)}</td><td>${esc(x.price)}</td></tr>`).join("");
+  v.innerHTML = `<div class="card"><h2>Purchases</h2><table><thead><tr><th>When</th><th>User</th><th>Coin</th><th>USDT</th><th>Quantity</th><th>Price</th></tr></thead><tbody>${rows || `<tr><td colspan="6" style="color:var(--muted)">None.</td></tr>`}</tbody></table></div>`;
+}
+async function vReferrals(v) {
+  const d = await api("GET", "/admin/referrals");
+  const rows = (d.items || []).map((x) => `<tr><td>${fmtDate(x.created_at)}</td><td>${esc(x.inviter_id)}</td><td>${esc(x.invitee_id)}</td><td>${badge(x.status, statusKind(x.status === "qualified" ? "completed" : x.status))}</td><td>${esc(x.reward_amount || "")}</td></tr>`).join("");
+  v.innerHTML = `<div class="card"><h2>Referrals</h2><table><thead><tr><th>When</th><th>Inviter</th><th>Invitee</th><th>Status</th><th>Reward</th></tr></thead><tbody>${rows || `<tr><td colspan="5" style="color:var(--muted)">None.</td></tr>`}</tbody></table></div>`;
+}
+
+/* ---------- Withdrawals (queue) ---------- */
+async function vWithdrawals(v) {
+  const st = window.WD_STATUS || "pending";
+  const d = await api("GET", "/admin/withdrawals?status=" + encodeURIComponent(st));
+  const filter = ["pending", "approved", "paid", "rejected", "cancelled"].map((s) => `<button class="btn small ${s === st ? "" : "sec"}" data-act="wdFilter" data-s="${s}" type="button">${s}</button>`).join(" ");
+  const cards = (d.items || []).map((w) => {
+    const u = w.user || {};
+    const actions = w.status === "pending" ? `<button class="btn small" data-act="wdAction" data-id="${esc(w.public_id)}" data-a="approve" type="button">Approve</button> <button class="btn small danger" data-act="wdAction" data-id="${esc(w.public_id)}" data-a="reject" type="button">Reject</button>`
+      : w.status === "approved" ? `<button class="btn small" data-act="wdAction" data-id="${esc(w.public_id)}" data-a="paid" type="button">Mark paid (enter hash)</button> <button class="btn small danger" data-act="wdAction" data-id="${esc(w.public_id)}" data-a="reject" type="button">Reject</button>` : "";
+    return `<div class="card">
+      <div class="kv"><span>Request</span><b>${esc(w.id)}</b></div>
+      <div class="kv"><span>User</span><b>${esc(u.accountId)} · ${esc(u.username || "no username")}</b></div>
+      <div class="kv"><span>Telegram</span><b>${esc(u.telegramId || "—")} ${u.telegramUsername ? "(@" + esc(u.telegramUsername) + ")" : ""}</b></div>
+      <div class="kv"><span>Email</span><b>${esc(u.email || "—")}</b></div>
+      <div class="kv"><span>Asset / network</span><b>${esc(w.asset)} ${esc(w.network || "")}</b></div>
+      <div class="kv"><span>Amount</span><b>${esc(w.amount)} ${esc(w.asset)}</b></div>
+      <div class="kv"><span>Value (USDT at request)</span><b>${esc(w.usd_value || "")}</b></div>
+      <div class="kv"><span>Balance now / reserved</span><b>${esc(w.balanceNow)} / ${esc(w.reservedNow)}</b></div>
+      <div class="kv"><span>Referrals</span><b>${esc(w.qualifyingReferrals)} ${w.eligible && w.eligible.referrals ? badge("ok", "ok") : badge("not enough", "bad")}</b></div>
+      <div class="kv"><span>Minimum met</span><b>${w.eligible && w.eligible.minimum ? badge("yes", "ok") : badge("no", "bad")}</b></div>
+      <div class="kv"><span>Requested</span><b>${fmtDate(w.requested_at)}</b></div>
+      <div class="kv"><span>Status</span><b>${badge(w.status, statusKind(w.status))}</b></div>
+      ${w.reason ? `<div class="kv"><span>Reason</span><b>${esc(w.reason)}</b></div>` : ""}
+      ${w.txn_hash ? `<div class="kv"><span>Payment hash</span><b>${esc(w.txn_hash)}</b></div>` : ""}
+      <div style="margin-top:8px"><span style="color:var(--muted);font-size:12px">Destination address</span>
+        <div class="addr">${esc(w.address)}</div>
+        <button class="btn small sec" data-act="copy" data-text="${esc(w.address)}" type="button">Copy address</button></div>
+      <div class="row">${actions}</div>
+    </div>`;
+  }).join("");
+  v.innerHTML = `<div class="row">${filter}</div>${cards || `<div class="card" style="color:var(--muted)">No ${esc(st)} requests.</div>`}`;
+}
+
+/* ---------- Reports ---------- */
+async function vReports(v) {
+  const sub = window.REPORT || "locations";
+  const tabs = [["locations","Locations"],["daily","Daily"],["shared","Same network"],["export","Export CSV"]].map(([k, l]) => `<button class="btn small ${k === sub ? "" : "sec"}" data-act="repTab" data-s="${k}" type="button">${l}</button>`).join(" ");
+  let body = "";
+  if (sub === "locations") {
+    const d = await api("GET", "/admin/reports/locations");
+    const c = (d.countries || []).map((x) => `<tr><td>${esc(x.country)}</td><td>${esc(x.users)}</td></tr>`).join("");
+    const ci = (d.cities || []).map((x) => `<tr><td>${esc(x.country)}</td><td>${esc(x.city)}</td><td>${esc(x.users)}</td></tr>`).join("");
+    const g = (d.gpsPoints || []).map((x) => `<tr><td>${esc(x.accountId || x.userId)}</td><td>${esc(x.username || "")}</td><td><a style="color:var(--cyan)" target="_blank" rel="noopener" href="https://maps.google.com/?q=${esc(x.lat)},${esc(x.lng)}">${esc(Number(x.lat).toFixed(5))}, ${esc(Number(x.lng).toFixed(5))}</a></td><td>±${esc(Math.round(x.accuracyM || 0))} m</td><td>${fmtDate(x.at)}</td></tr>`).join("");
+    body = `<div class="card"><h2>Users with exact GPS: ${esc(d.usersWithGps || 0)}</h2><p style="color:var(--muted)">${esc(d.note || "")}</p>
+      <h2>Countries</h2><table><thead><tr><th>Country</th><th>Users</th></tr></thead><tbody>${c || `<tr><td colspan="2" style="color:var(--muted)">No data.</td></tr>`}</tbody></table></div>
+      <div class="card"><h2>Cities</h2><table><thead><tr><th>Country</th><th>City</th><th>Users</th></tr></thead><tbody>${ci || `<tr><td colspan="3" style="color:var(--muted)">No data.</td></tr>`}</tbody></table></div>
+      <div class="card"><h2>Exact GPS points</h2><table><thead><tr><th>Account</th><th>Username</th><th>Map</th><th>Accuracy</th><th>When</th></tr></thead><tbody>${g || `<tr><td colspan="5" style="color:var(--muted)">No GPS points.</td></tr>`}</tbody></table></div>`;
+  } else if (sub === "daily") {
+    const d = await api("GET", "/admin/reports/daily?days=30");
+    const rows = (d.items || []).map((x) => `<tr><td>${esc(x.day)}</td><td>${esc(x.signups || 0)}</td><td>${esc(x.deposits || 0)}</td><td>${esc(x.depositsUsdt || "")}</td><td>${esc(x.bets || 0)}</td><td>${esc(x.betStakeUsdt || "")}</td><td>${esc(x.betsWon || 0)} / ${esc(x.betsLost || 0)}</td><td>${esc(x.withdrawalRequests || 0)}</td><td>${esc(x.withdrawalsPaid || 0)}</td></tr>`).join("");
+    body = `<div class="card"><h2>Last 30 days</h2><table><thead><tr><th>Day</th><th>Signups</th><th>Deposits</th><th>Dep. USDT</th><th>Bets</th><th>Stake USDT</th><th>Won / lost</th><th>Withdrawals</th><th>Paid</th></tr></thead><tbody>${rows || `<tr><td colspan="9" style="color:var(--muted)">No activity.</td></tr>`}</tbody></table></div>`;
+  } else if (sub === "shared") {
+    const d = await api("GET", "/admin/reports/shared-networks");
+    const rows = (d.items || []).map((x) => `<div class="card"><h2>${esc(x.users)} accounts on one network</h2>${(x.accounts || []).map((a) => `<div class="kv"><span>${esc(a.accountId)}</span><b>${esc(a.username || "")}</b></div>`).join("")}</div>`).join("");
+    body = rows || `<div class="card" style="color:var(--muted)">No shared networks found.</div>`;
+  } else {
+    body = `<div class="card"><h2>Export</h2><p style="color:var(--muted)">Downloads a CSV file of the records.</p><div class="row">
+      ${["users","deposits","bets","withdrawals","referrals","purchases"].map((n) => `<button class="btn small sec" data-act="export" data-n="${n}" type="button">${n}.csv</button>`).join(" ")}</div></div>`;
+  }
+  v.innerHTML = `<div class="row">${tabs}</div>${body}`;
+}
+
+/* ---------- Logs ---------- */
+async function vLogs(v) {
+  const sub = window.LOG || "audit";
+  const tabs = [["audit","Audit log"],["notes","Notifications"],["events","Plisio events"]].map(([k, l]) => `<button class="btn small ${k === sub ? "" : "sec"}" data-act="logTab" data-s="${k}" type="button">${l}</button>`).join(" ");
+  let body = "";
+  if (sub === "audit") {
+    const d = await api("GET", "/admin/audit");
+    const rows = (d.items || []).map((x) => `<tr><td>${fmtDate(x.created_at)}</td><td>${esc(x.actor_type)} ${esc(x.actor_id || "")}</td><td>${esc(x.action)}</td><td>${esc(x.target_type || "")} ${esc(x.target_id || "")}</td><td>${esc(JSON.stringify(x.details || {}))}</td></tr>`).join("");
+    body = `<div class="card"><table><thead><tr><th>When</th><th>Who</th><th>Action</th><th>Target</th><th>Details</th></tr></thead><tbody>${rows || `<tr><td colspan="5" style="color:var(--muted)">Empty.</td></tr>`}</tbody></table></div>`;
+  } else if (sub === "notes") {
+    const d = await api("GET", "/admin/notifications");
+    const rows = (d.items || []).map((x) => `<tr><td>${fmtDate(x.created_at)}</td><td>${esc(x.audience)}</td><td>${esc(x.kind)}</td><td>${esc(x.user_id || "")}</td><td>${esc(JSON.stringify(x.payload || {}))}</td></tr>`).join("");
+    body = `<div class="card"><table><thead><tr><th>When</th><th>To</th><th>Kind</th><th>User</th><th>Payload</th></tr></thead><tbody>${rows || `<tr><td colspan="5" style="color:var(--muted)">Empty.</td></tr>`}</tbody></table></div>`;
+  } else {
+    const d = await api("GET", "/admin/events");
+    const rows = (d.items || []).map((x) => `<tr><td>${fmtDate(x.created_at)}</td><td>${esc(x.provider)}</td><td>${esc(x.txn_id || "")}</td><td>${badge(x.outcome || "", statusKind(x.outcome))}</td></tr>`).join("");
+    body = `<div class="card"><table><thead><tr><th>When</th><th>Provider</th><th>Transaction</th><th>Outcome</th></tr></thead><tbody>${rows || `<tr><td colspan="4" style="color:var(--muted)">Empty.</td></tr>`}</tbody></table></div>`;
+  }
+  v.innerHTML = `<div class="row">${tabs}</div>${body}`;
+}
+
+/* ---------- Settings ---------- */
+async function vSettings(v) {
+  const s = await api("GET", "/admin/settings");
+  const sw = (key, label) => `<div class="kv"><span>${esc(label)}</span><b>${s[key] ? badge("PAUSED", "bad") : badge("running", "ok")} <button class="btn small ${s[key] ? "sec" : "danger"}" data-act="toggle" data-k="${key}" data-on="${s[key] ? "false" : "true"}" type="button">${s[key] ? "Resume" : "Pause"}</button></b></div>`;
+  v.innerHTML = `<div class="card"><h2>Pause switches</h2>
+    <p style="color:var(--muted)">Pausing stops new requests of that type. Existing records are kept.</p>
+    ${sw("bets_paused", "New bets")}${sw("withdrawals_paused", "New withdrawals")}${sw("purchases_paused", "New purchases")}</div>
+    <div class="card"><h2>Maintenance</h2><div class="row">
+      <button class="btn small sec" data-act="jobSettle" type="button">Run bet settlement now</button>
+      <button class="btn small sec" data-act="jobRecon" type="button">Re-check deposits now</button>
+      <button class="btn small sec" data-act="logout" type="button">Log out of admin</button></div></div>`;
+}
+
+/* ---------- actions ---------- */
+async function act(name, ds) {
+  try {
+    if (name === "searchUsers") { window.USER_Q = $("#uq").value.trim(); return render(); }
+    if (name === "openUser") { return openUser(ds.id); }
+    if (name === "backUsers") { window.USER_Q = ""; TAB = "users"; buildNav(); return render(); }
+    if (name === "copy") { try { await navigator.clipboard.writeText(ds.text); toast("Copied"); } catch (e) { toast("Copy not allowed here. Select the address and copy it."); } return; }
+    if (name === "wdFilter") { window.WD_STATUS = ds.s; return render(); }
+    if (name === "repTab") { window.REPORT = ds.s; return render(); }
+    if (name === "logTab") { window.LOG = ds.s; return render(); }
+    if (name === "export") { await download("/admin/export/" + ds.n, ds.n + ".csv"); return toast("Downloaded"); }
+    if (name === "jobSettle") { const r = await api("POST", "/admin/jobs/settle"); toast("Settled: " + (r.settled || 0) + ", void: " + (r.void || 0)); return render(); }
+    if (name === "jobRecon") { const r = await api("POST", "/admin/jobs/reconcile"); toast("Checked " + (r.checked || 0) + ", credited " + (r.credited || 0)); return render(); }
+    if (name === "logout") { try { await api("POST", "/admin/logout"); } catch (e) {} TOKEN = null; return showLogin(); }
+    if (name === "toggle") { const on = ds.on === "true"; if (!(await confirmBox((on ? "Pause" : "Resume") + " this function for all users?", on ? "Pause" : "Resume", on))) return; await api("POST", "/admin/settings", { key: ds.k, on }); toast("Saved"); return render(); }
+    if (name === "setStatus") {
+      const r = await modal("Change account status", [{ label: "Reason (required)", required: true }], "Save", ds.status !== "active");
+      if (!r) return;
+      await api("POST", "/admin/users/" + encodeURIComponent(ds.id) + "/status", { status: ds.status, reason: r[0] });
+      toast("Status set to " + ds.status); return openUser(ds.id);
+    }
+    if (name === "adjust") {
+      const r = await modal("Manual ledger adjustment", [
+        { label: "Balance (deposit, earnings or holding)", required: true, value: "earnings" },
+        { label: "Asset (USDT, BTC, ETH or SOL)", required: true, value: "USDT" },
+        { label: "Amount (negative to deduct)", required: true, type: "text" },
+        { label: "Reason (required)", required: true, multiline: true }], "Apply");
+      if (!r) return;
+      await api("POST", "/admin/ledger/adjust", { userId: ds.id, bucket: r[0], asset: r[1], amount: r[2], reason: r[3] });
+      toast("Adjustment saved"); return openUser(ds.id);
+    }
+    if (name === "wdAction") return wdAction(ds.id, ds.a);
+  } catch (e) { toast(e.message, true); }
+}
+async function wdAction(id, a) {
+  if (a === "approve") {
+    if (!(await confirmBox("Approve this withdrawal? The funds stay reserved until you mark it paid.", "Approve", false))) return;
+    await api("POST", "/admin/withdrawals/" + encodeURIComponent(id) + "/approve", {});
+    toast("Approved"); return render();
+  }
+  if (a === "reject") {
+    const r = await modal("Reject withdrawal", [{ label: "Reason shown to the user (required)", required: true, multiline: true }], "Reject", true);
+    if (!r) return;
+    await api("POST", "/admin/withdrawals/" + encodeURIComponent(id) + "/reject", { reason: r[0] });
+    toast("Rejected and funds released"); return render();
+  }
+  if (a === "paid") {
+    const r = await modal("Mark as paid", [{ label: "Payment transaction hash (from your wallet)", required: true }], "Mark paid", false);
+    if (!r) return;
+    if (!(await confirmBox("Confirm you have sent this payment. This removes the funds from the user's balance.", "Mark paid", true))) return;
+    await api("POST", "/admin/withdrawals/" + encodeURIComponent(id) + "/paid", { txnHash: r[0] });
+    toast("Marked as paid"); return render();
+  }
+}
+let toastTimer = null;
+function toast(text, bad) {
+  let t = document.getElementById("toast");
+  if (!t) { t = document.createElement("div"); t.id = "toast"; t.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);bottom:18px;padding:10px 16px;border-radius:12px;font-size:13px;z-index:200;max-width:90%;"; document.body.appendChild(t); }
+  t.style.background = bad ? "#3a0f18" : "#E8F0FF"; t.style.color = bad ? "#FFC9D2" : "#07122A";
+  t.textContent = text; t.style.display = "block";
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.style.display = "none"; }, 3200);
+}
+
+/* ---------- wiring ---------- */
+document.addEventListener("click", (ev) => {
+  const id = ev.target.id;
+  if (id === "gateBtn") { show("#gate", false); show("#login", true); startSignIn(); }
+  if (id === "pwBtn") submitPassword();
+  if (id === "reloadBtn") render();
+  if (id === "logoutBtn") act("logout");
+});
+document.addEventListener("keydown", (ev) => {
+  if (ev.key !== "Enter") return;
+  if (ev.target.id === "pwInput") submitPassword();
+});
+(function init() {
+  if (TG) { try { TG.ready(); TG.expand(); } catch (e) {} }
+  // The gate stays up until the admin presses Enter. Nothing loads before that.
+})();
+</script>
+</body>
+</html>
